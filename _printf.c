@@ -1,90 +1,46 @@
 #include "main.h"
-
-void cleanup(va_list args, buffer_t *output);
-int run_printf(const char *format, va_list args, buffer_t *output);
-int _printf(const char *format, ...);
-
 /**
- * cleanup - Peforms cleanup operations for _printf.
- * @args: A va_list of arguments provided to _printf.
- * @output: A buffer_t struct.
+ * _printf - is a function that selects the correct function to print.
+ * @format: identifier to look for.
+ * Return: the length of the string.
  */
-void cleanup(va_list args, buffer_t *output)
+int _printf(const char * const format, ...)
 {
-	va_end(args);
-	write(1, output->start, output->len);
-	free_buffer(output);
-}
+	convert p[] = {
+		{"%s", print_s}, {"%c", print_c},
+		{"%%", print_37},
+		{"%i", print_i}, {"%d", print_d}, {"%r", print_revs},
+		{"%R", print_rot13}, {"%b", print_bin},
+		{"%u", print_unsigned},
+		{"%o", print_oct}, {"%x", print_hex}, {"%X", print_HEX},
+		{"%S", print_exc_string}, {"%p", print_pointer}
+	};
 
-/**
- * run_printf - Reads through the format string for _printf.
- * @format: Character string to print - may contain directives.
- * @output: A buffer_t struct containing a buffer.
- * @args: A va_list of arguments.
- *
- * Return: The number of characters stored to output.
- */
-int run_printf(const char *format, va_list args, buffer_t *output)
-{
-	int i, wid, prec, ret = 0;
-	char tmp;
-	unsigned char flags, len;
-	unsigned int (*f)(va_list, buffer_t *,
-			unsigned char, int, int, unsigned char);
-
-	for (i = 0; *(format + i); i++)
-	{
-		len = 0;
-		if (*(format + i) == '%')
-		{
-			tmp = 0;
-			flags = handle_flags(format + i + 1, &tmp);
-			wid = handle_width(args, format + i + tmp + 1, &tmp);
-			prec = handle_precision(args, format + i + tmp + 1,
-					&tmp);
-			len = handle_length(format + i + tmp + 1, &tmp);
-
-			f = handle_specifiers(format + i + tmp + 1);
-			if (f != NULL)
-			{
-				i += tmp + 1;
-				ret += f(args, output, flags, wid, prec, len);
-				continue;
-			}
-			else if (*(format + i + tmp + 1) == '\0')
-			{
-				ret = -1;
-				break;
-			}
-		}
-		ret += _memcpy(output, (format + i), 1);
-		i += (len != 0) ? 1 : 0;
-	}
-	cleanup(args, output);
-	return (ret);
-}
-
-/**
- * _printf - Outputs a formatted string.
- * @format: Character string to print - may contain directives.
- *
- * Return: The number of characters printed.
- */
-int _printf(const char *format, ...)
-{
-	buffer_t *output;
 	va_list args;
-	int ret;
-
-	if (format == NULL)
-		return (-1);
-	output = init_buffer();
-	if (output == NULL)
-		return (-1);
+	int i = 0, j, length = 0;
 
 	va_start(args, format);
+	if (format == NULL || (format[0] == '%' && format[1] == '\0'))
+		return (-1);
 
-	ret = run_printf(format, args, output);
-
-	return (ret);
+Here:
+	while (format[i] != '\0')
+	{
+		j = 13;
+		while (j >= 0)
+		{
+			if (p[j].ph[0] == format[i] && p[j].ph[1] == format[i + 1])
+			{
+				length += p[j].function(args);
+				i = i + 2;
+				goto Here;
+			}
+			j--;
+		}
+		_putchar(format[i]);
+		length++;
+		i++;
+	}
+	va_end(args);
+	return (length);
 }
